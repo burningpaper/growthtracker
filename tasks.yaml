@@ -66,5 +66,5 @@ tasks:
     story: Foundation
     phase: 2
     description: Setup Neon (PostgreSQL) Connection and Schema
-    status: pending
+    status: completed
     file: /Users/user/Coding Stuff/growth-tracker/server.js
