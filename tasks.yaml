@@ -1,0 +1,70 @@
+tasks:
+  - id: T001
+    story: Setup
+    phase: 1
+    description: Create project structure (index.html, style.css, app.js)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/index.html
+
+  - id: T002
+    story: US1
+    phase: 3
+    description: Implement Lead Capture Interface (Form & Modal)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/index.html
+
+  - id: T003
+    story: US2
+    phase: 3
+    description: Implement Lead Goals Setup (Value, Likelihood, Date)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/app.js
+
+  - id: T004
+    story: US3
+    phase: 3
+    description: Implement Lead List/Dashboard (View existing leads)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/app.js
+
+  - id: T005
+    story: US4
+    phase: 3
+    description: Implement Management Reports (Charts & Stats)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/app.js
+
+  - id: T006
+    story: Foundation
+    phase: 2
+    description: Setup Backend Server (Express) for Notifications
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/server.js
+
+  - id: T007
+    story: US5
+    phase: 4
+    description: Implement MS Teams Notification Stub
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/server.js
+
+  - id: T008
+    story: US5
+    phase: 4
+    description: Implement Email Notification Stub
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/server.js
+
+  - id: T009
+    story: US5
+    phase: 4
+    description: Integrate Frontend with Backend for Notifications
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/app.js
+
+  - id: T010
+    story: Foundation
+    phase: 2
+    description: Setup Neon (PostgreSQL) Connection and Schema
+    status: pending
+    file: /Users/user/Coding Stuff/growth-tracker/server.js
