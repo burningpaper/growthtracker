@@ -62,6 +62,7 @@ specs/growth-tracker/
 ├── style.css            # Styles
 ├── app.js               # Frontend Logic
 ├── server.js            # Backend Server (Notifications)
+├── vercel.json          # Vercel Deployment Config
 └── spec.md              # Specification
 ```
 

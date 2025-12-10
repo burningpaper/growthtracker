@@ -68,3 +68,10 @@ tasks:
     description: Setup Neon (PostgreSQL) Connection and Schema
     status: completed
     file: /Users/user/Coding Stuff/growth-tracker/server.js
+
+  - id: T011
+    story: Foundation
+    phase: 2
+    description: Configure Vercel Deployment (vercel.json & Static Serving)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/vercel.json
