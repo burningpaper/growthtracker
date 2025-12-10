@@ -82,3 +82,10 @@ tasks:
     description: Fix Vercel Root Route (Explicit sendFile)
     status: completed
     file: /Users/user/Coding Stuff/growth-tracker/server.js
+
+  - id: T013
+    story: Foundation
+    phase: 2
+    description: Fix Vercel Static Serving (Use Rewrites)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/vercel.json
