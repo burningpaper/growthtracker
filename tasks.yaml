@@ -75,3 +75,10 @@ tasks:
     description: Configure Vercel Deployment (vercel.json & Static Serving)
     status: completed
     file: /Users/user/Coding Stuff/growth-tracker/vercel.json
+
+  - id: T012
+    story: Foundation
+    phase: 2
+    description: Fix Vercel Root Route (Explicit sendFile)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/server.js
