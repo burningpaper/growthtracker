@@ -9,6 +9,14 @@ The system will need rules and behaviour so that leads are managed through a pip
 - View existing leads and update them daily
 - Management reports - leads, by client, by month, by status
 - MS Teams and email notifications for updates and key changes in status
+- **Multi-User Environment**: Multiple client service people can login and manage their own leads.
+- **Personalized Dashboard**: Users see a home screen with their current leads upon login.
+
+# Authentication & Users
+- Users must register/login to access the system.
+- Leads are associated with the user who created them.
+- "My Leads" view shows only leads owned by the logged-in user.
+- (Optional Future) Admin view to see all leads.
 
 # Acceptance
 When we are able to initiate new leads and track and manage them through a pipeline to sales, and the team feel supported by the system to help them perform their role.

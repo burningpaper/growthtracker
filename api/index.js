@@ -4,13 +4,38 @@ const bodyParser = require('body-parser');
 const { Pool } = require('pg');
 const path = require('path');
 require('dotenv').config();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
+
+// Serve static files from the parent directory (for local development)
+app.use(express.static(path.join(__dirname, '..')));
+
+// Authentication Middleware
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.sendStatus(401);
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.sendStatus(403);
+        req.user = user;
+        next();
+    });
+};
+
+// Serve index.html for root route (local dev fallback)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
 
 // Database Connection
 const pool = new Pool({
@@ -20,37 +45,46 @@ const pool = new Pool({
     }
 });
 
-// Initialize Database Schema
-async function initDb() {
+// ... initDb ...
+
+// Auth Routes
+app.post('/api/auth/register', async (req, res) => {
+    const { name, email, password } = req.body;
     try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS leads (
-                id SERIAL PRIMARY KEY,
-                client VARCHAR(255) NOT NULL,
-                title VARCHAR(255) NOT NULL,
-                date DATE,
-                value NUMERIC,
-                likelihood INTEGER,
-                status VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        console.log('✅ Database schema initialized');
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await pool.query(
+            'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
+            [name, email, hashedPassword]
+        );
+        res.status(201).json(result.rows[0]);
     } catch (err) {
-        console.error('❌ Error initializing database:', err);
+        console.error(err);
+        res.status(500).json({ error: 'Error registering user' });
     }
-}
-
-initDb();
-
-// Routes
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Growth Tracker API is running' });
 });
 
-app.get('/api/leads', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
+    const { email, password } = req.body;
     try {
-        const result = await pool.query('SELECT * FROM leads ORDER BY created_at DESC');
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        const user = result.rows[0];
+
+        if (user && await bcrypt.compare(password, user.password_hash)) {
+            const token = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET);
+            res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+        } else {
+            res.status(401).json({ error: 'Invalid credentials' });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error logging in' });
+    }
+});
+
+// Lead Routes (Protected)
+app.get('/api/leads', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM leads WHERE user_id = $1 ORDER BY created_at DESC', [req.user.id]);
         res.json(result.rows);
     } catch (err) {
         console.error(err);
@@ -58,17 +92,17 @@ app.get('/api/leads', async (req, res) => {
     }
 });
 
-app.post('/api/leads', async (req, res) => {
+app.post('/api/leads', authenticateToken, async (req, res) => {
     const { client, title, date, value, likelihood, status } = req.body;
 
     try {
         const result = await pool.query(
-            'INSERT INTO leads (client, title, date, value, likelihood, status) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [client, title, date, value, likelihood, status]
+            'INSERT INTO leads (client, title, date, value, likelihood, status, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [client, title, date, value, likelihood, status, req.user.id]
         );
 
         const newLead = result.rows[0];
-        console.log(`[New Lead] ${newLead.client} - ${newLead.title}`);
+        console.log(`[New Lead] ${newLead.client} - ${newLead.title} (User: ${req.user.id})`);
 
         // Trigger Notifications
         sendTeamsNotification(newLead, 'New Opportunity Identified');
@@ -81,16 +115,20 @@ app.post('/api/leads', async (req, res) => {
     }
 });
 
-app.put('/api/leads/:id', async (req, res) => {
+app.put('/api/leads/:id', authenticateToken, async (req, res) => {
     const { id } = req.params;
     const { client, title, date, value, likelihood, status } = req.body;
 
     try {
-        // Get old status first for notifications
-        const oldLeadResult = await pool.query('SELECT status FROM leads WHERE id = $1', [id]);
+        // Get old status first for notifications & verify ownership
+        const oldLeadResult = await pool.query('SELECT status, user_id FROM leads WHERE id = $1', [id]);
 
         if (oldLeadResult.rows.length === 0) {
             return res.status(404).json({ error: 'Lead not found' });
+        }
+
+        if (oldLeadResult.rows[0].user_id !== req.user.id) {
+            return res.status(403).json({ error: 'Unauthorized' });
         }
 
         const oldStatus = oldLeadResult.rows[0].status;

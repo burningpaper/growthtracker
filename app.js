@@ -1,76 +1,99 @@
-// App State
+// App State Management
 const state = {
     leads: [],
-    view: 'dashboard'
+    view: 'dashboard',
+    user: JSON.parse(localStorage.getItem('user')) || null
 };
+
+// Auth Check
+const token = localStorage.getItem('token');
+if (!token) {
+    window.location.href = 'login.html';
+}
+
+const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
 
 // DOM Elements
 const elements = {
+    navBtns: document.querySelectorAll('.nav-btn'),
+    views: document.querySelectorAll('.view'),
     newLeadBtn: document.getElementById('new-lead-btn'),
     leadModal: document.getElementById('lead-modal'),
     closeModalBtns: document.querySelectorAll('.close-modal'),
     leadForm: document.getElementById('lead-form'),
     leadsList: document.getElementById('leads-list'),
-    totalLeadsCount: document.getElementById('total-leads-count'),
-    activeValueSum: document.getElementById('active-value-sum'),
-    winRateCalc: document.getElementById('win-rate-calc'),
-    navBtns: document.querySelectorAll('.nav-btn'),
-    views: document.querySelectorAll('.view')
+    totalLeads: document.getElementById('total-leads-count'),
+    activeValue: document.getElementById('active-value-sum'),
+    winRate: document.getElementById('win-rate-calc'),
+    logoutBtn: document.getElementById('logout-btn')
 };
 
-// Initialization
-function init() {
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
     loadLeads();
     setupEventListeners();
-    renderDashboard();
-    console.log('Growth Tracker Initialized 🚀');
-}
+    updateUserUI();
+});
 
-// Event Listeners
 function setupEventListeners() {
-    // Modal controls
+    // Navigation
+    elements.navBtns.forEach(btn => {
+        btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+
+    // Modal
     elements.newLeadBtn.addEventListener('click', () => toggleModal(true));
     elements.closeModalBtns.forEach(btn => {
         btn.addEventListener('click', () => toggleModal(false));
     });
 
-    // Form submission
+    // Form
     elements.leadForm.addEventListener('submit', handleNewLead);
 
-    // Navigation
-    elements.navBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => switchView(e.target.dataset.view));
-    });
+    // Logout
+    if (elements.logoutBtn) {
+        elements.logoutBtn.addEventListener('click', logout);
+    }
+}
+
+function updateUserUI() {
+    if (state.user) {
+        // Could update UI with user name here
+        console.log('Logged in as:', state.user.name);
+    }
+}
+
+function logout() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = 'login.html';
 }
 
 // Logic
 async function loadLeads() {
     try {
-        const response = await fetch('http://localhost:3000/api/leads');
+        const response = await fetch(`${API_URL}/leads`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.status === 401 || response.status === 403) {
+            logout();
+            return;
+        }
+
         const leads = await response.json();
         state.leads = leads;
         renderDashboard();
     } catch (error) {
         console.error('Failed to load leads:', error);
-        // Fallback or error UI
     }
 }
 
 function toggleModal(show) {
     if (show) {
         elements.leadModal.classList.remove('hidden');
-        // Small delay to allow display:block to apply before opacity transition
-        setTimeout(() => elements.leadModal.classList.add('visible'), 10);
-    } else {
-        elements.leadModal.classList.remove('visible');
-        setTimeout(() => elements.leadModal.classList.add('hidden'), 300);
-    }
-}
-
-function toggleModal(show) {
-    if (show) {
-        elements.leadModal.classList.remove('hidden');
-        // Small delay to allow display:block to apply before opacity transition
         setTimeout(() => elements.leadModal.classList.add('visible'), 10);
     } else {
         elements.leadModal.classList.remove('visible');
@@ -91,10 +114,11 @@ async function handleNewLead(e) {
     };
 
     try {
-        const response = await fetch('http://localhost:3000/api/leads', {
+        const response = await fetch(`${API_URL}/leads`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(formData)
         });
@@ -117,13 +141,11 @@ async function handleNewLead(e) {
 function switchView(viewName) {
     state.view = viewName;
 
-    // Update Nav
     elements.navBtns.forEach(btn => {
         if (btn.dataset.view === viewName) btn.classList.add('active');
         else btn.classList.remove('active');
     });
 
-    // Update View
     elements.views.forEach(view => {
         if (view.id === `${viewName}-view`) view.classList.remove('hidden');
         else view.classList.add('hidden');
@@ -134,20 +156,20 @@ function switchView(viewName) {
     }
 }
 
-// Rendering
 function renderDashboard() {
-    // Update Summary
-    elements.totalLeadsCount.textContent = state.leads.length;
+    // Stats
+    elements.totalLeads.textContent = state.leads.length;
 
-    const totalValue = state.leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
-    elements.activeValueSum.textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalValue);
+    const activeLeads = state.leads.filter(l => l.status !== 'won' && l.status !== 'lost');
+    const totalValue = activeLeads.reduce((sum, l) => sum + Number(l.value), 0);
+    elements.activeValue.textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalValue);
 
-    const wonLeads = state.leads.filter(l => l.status === 'won').length;
-    const closedLeads = state.leads.filter(l => l.status === 'won' || l.status === 'lost').length;
-    const winRate = closedLeads > 0 ? Math.round((wonLeads / closedLeads) * 100) : 0;
-    elements.winRateCalc.textContent = `${winRate}%`;
+    const wonCount = state.leads.filter(l => l.status === 'won').length;
+    const closedCount = state.leads.filter(l => l.status === 'won' || l.status === 'lost').length;
+    const winRate = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : 0;
+    elements.winRate.textContent = `${winRate}%`;
 
-    // Render List
+    // List
     elements.leadsList.innerHTML = '';
 
     if (state.leads.length === 0) {
@@ -162,22 +184,7 @@ function renderDashboard() {
     state.leads.forEach(lead => {
         const card = document.createElement('div');
         card.className = 'lead-card';
-        // Inline styles for card for now, move to CSS later
-        card.style.background = 'var(--surface-light)';
-        card.style.padding = '20px';
-        card.style.borderRadius = 'var(--radius-md)';
-        card.style.border = '1px solid rgba(255,255,255,0.05)';
-
-        const dateStr = lead.date ? new Date(lead.date).toLocaleDateString() : 'No Date';
-
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <span style="color:var(--primary-color); font-weight:600; font-size:0.9rem;">${lead.client}</span>
-                <span class="status-badge" style="background:rgba(255,255,255,0.1); padding:4px 8px; border-radius:4px; font-size:0.8rem; text-transform:capitalize;">${lead.status}</span>
-            </div>
-            <h3 style="margin-bottom:15px; font-size:1.1rem;">${lead.title}</h3>
-            <div style="display:flex; justify-content:space-between; color:var(--text-muted); font-size:0.9rem; margin-bottom: 8px;">
-                <span>Target: ${dateStr}</span>
                 <span>${lead.likelihood}% Prob.</span>
             </div>
             <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">

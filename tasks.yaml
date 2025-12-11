@@ -89,3 +89,38 @@ tasks:
     description: Fix Vercel Static Serving (Use Rewrites)
     status: completed
     file: /Users/user/Coding Stuff/growth-tracker/vercel.json
+
+  - id: T014
+    story: MultiUser
+    phase: 5
+    description: Update Database Schema (Users Table & Leads FK)
+    status: pending
+    file: /Users/user/Coding Stuff/growth-tracker/api/index.js
+
+  - id: T015
+    story: MultiUser
+    phase: 5
+    description: Implement Authentication Endpoints (Register/Login/Middleware)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/api/index.js
+
+  - id: T016
+    story: MultiUser
+    phase: 5
+    description: Update Lead Endpoints for User Isolation
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/api/index.js
+
+  - id: T017
+    story: MultiUser
+    phase: 5
+    description: Create Login Page (login.html)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/login.html
+
+  - id: T018
+    story: MultiUser
+    phase: 5
+    description: Integrate Auth in Frontend (app.js)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/app.js
