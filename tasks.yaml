@@ -138,3 +138,10 @@ tasks:
     description: Update Login Page to Handle SSO Token
     status: in-progress
     file: /Users/user/Coding Stuff/growth-tracker/public/login.html
+
+  - id: T021
+    story: OktaSSO
+    phase: 6
+    description: Create SSO Test Harness (Token Generator & Test Page)
+    status: pending
+    file: /Users/user/Coding Stuff/growth-tracker/public/sso-test.html

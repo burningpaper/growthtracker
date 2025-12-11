@@ -127,6 +127,24 @@ app.post('/api/auth/sso', async (req, res) => {
     }
 });
 
+// Dev Endpoint to Generate SSO Token (For Testing)
+app.post('/api/dev/sso-token', async (req, res) => {
+    const { email, name } = req.body;
+    const ssoPrivateKey = process.env.SSO_PRIVATE_KEY;
+
+    if (!ssoPrivateKey) {
+        return res.status(500).json({ error: 'SSO_PRIVATE_KEY not configured' });
+    }
+
+    try {
+        const token = jwt.sign({ email, name }, ssoPrivateKey, { algorithm: 'RS256', expiresIn: '1h' });
+        res.json({ token });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error generating token' });
+    }
+});
+
 // Lead Routes (Protected)
 app.get('/api/leads', authenticateToken, async (req, res) => {
     try {

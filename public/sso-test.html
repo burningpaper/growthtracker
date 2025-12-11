@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulate Intranet - Growth Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background-color: #0070f3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background-color: #0051a2;
+        }
+
+        .note {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🏢 Intranet Portal</h1>
+        <p style="margin-bottom: 1.5rem;">Simulate clicking the "Growth Tracker" link from the company intranet.</p>
+
+        <form id="sso-form">
+            <div class="form-group">
+                <label>User Name</label>
+                <input type="text" id="name" value="Test User" required>
+            </div>
+            <div class="form-group">
+                <label>User Email</label>
+                <input type="email" id="email" value="test.user@agency.com" required>
+            </div>
+            <button type="submit">Login to Growth Tracker</button>
+        </form>
+
+        <p class="note">This will generate a valid RS256 token using the private key and redirect you to the app.</p>
+    </div>
+
+    <script>
+        document.getElementById('sso-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const btn = e.target.querySelector('button');
+
+            btn.textContent = 'Generating Token...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/dev/sso-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Redirect to login page with token
+                    window.location.href = `login.html?token=${data.token}`;
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to generate token'));
+                    btn.textContent = 'Login to Growth Tracker';
+                    btn.disabled = false;
+                }
+            } catch (err) {
+                alert('Connection error');
+                btn.textContent = 'Login to Growth Tracker';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>
