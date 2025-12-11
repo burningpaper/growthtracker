@@ -13,10 +13,12 @@ The system will need rules and behaviour so that leads are managed through a pip
 - **Personalized Dashboard**: Users see a home screen with their current leads upon login.
 
 # Authentication & Users
-- Users must register/login to access the system.
+- **Primary Auth**: Okta SSO via Intranet link.
+- **Mechanism**: Users arrive with an encrypted JWT token containing details (email, name).
+- **Fallback**: Email/Password login (legacy/admin).
+- **User Provisioning**: Auto-create user if they don't exist upon valid SSO login.
 - Leads are associated with the user who created them.
 - "My Leads" view shows only leads owned by the logged-in user.
-- (Optional Future) Admin view to see all leads.
 
 # Acceptance
 When we are able to initiate new leads and track and manage them through a pipeline to sales, and the team feel supported by the system to help them perform their role.

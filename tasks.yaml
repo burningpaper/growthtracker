@@ -94,7 +94,7 @@ tasks:
     story: MultiUser
     phase: 5
     description: Update Database Schema (Users Table & Leads FK)
-    status: pending
+    status: completed
     file: /Users/user/Coding Stuff/growth-tracker/api/index.js
 
   - id: T015
@@ -124,3 +124,17 @@ tasks:
     description: Integrate Auth in Frontend (app.js)
     status: completed
     file: /Users/user/Coding Stuff/growth-tracker/app.js
+
+  - id: T019
+    story: OktaSSO
+    phase: 6
+    description: Implement SSO Endpoint (Verify Token & Provision User)
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/api/index.js
+
+  - id: T020
+    story: OktaSSO
+    phase: 6
+    description: Update Login Page to Handle SSO Token
+    status: in-progress
+    file: /Users/user/Coding Stuff/growth-tracker/public/login.html

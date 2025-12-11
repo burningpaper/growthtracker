@@ -130,6 +130,47 @@
     <script>
         const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
 
+        // Check for SSO Token
+        window.addEventListener('DOMContentLoaded', async () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const ssoToken = urlParams.get('token');
+
+            if (ssoToken) {
+                // Show loading state
+                document.querySelector('.auth-container').innerHTML = '<h2>Authenticating...</h2><p>Please wait while we log you in via SSO.</p>';
+
+                try {
+                    const res = await fetch(`${API_URL}/auth/sso`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token: ssoToken })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok) {
+                        localStorage.setItem('token', data.token);
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                        // Clear query params
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        window.location.href = 'index.html';
+                    } else {
+                        document.querySelector('.auth-container').innerHTML = `
+                            <h2>Authentication Failed</h2>
+                            <p class="error-message" style="display:block">${data.error || 'Invalid SSO Token'}</p>
+                            <button onclick="window.location.href='login.html'" class="btn btn-primary" style="margin-top:1rem">Back to Login</button>
+                        `;
+                    }
+                } catch (err) {
+                    document.querySelector('.auth-container').innerHTML = `
+                        <h2>Connection Error</h2>
+                        <p class="error-message" style="display:block">Could not connect to server.</p>
+                        <button onclick="window.location.href='login.html'" class="btn btn-primary" style="margin-top:1rem">Try Again</button>
+                    `;
+                }
+            }
+        });
+
         function switchTab(tab) {
             const loginForm = document.getElementById('login-form');
             const registerForm = document.getElementById('register-form');

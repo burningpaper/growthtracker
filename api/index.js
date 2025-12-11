@@ -81,6 +81,52 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+app.post('/api/auth/sso', async (req, res) => {
+    const { token } = req.body;
+    const ssoPublicKey = process.env.SSO_PUBLIC_KEY;
+
+    if (!ssoPublicKey) {
+        console.error('SSO_PUBLIC_KEY not configured');
+        return res.status(500).json({ error: 'SSO configuration error' });
+    }
+
+    try {
+        // Verify the token using the Public Key (RS256)
+        const decoded = jwt.verify(token, ssoPublicKey, { algorithms: ['RS256'] });
+        const { email, name } = decoded;
+
+        if (!email) {
+            return res.status(400).json({ error: 'Invalid token: missing email' });
+        }
+
+        // Check if user exists
+        let result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        let user = result.rows[0];
+
+        if (!user) {
+            // Provision new user
+            // Note: We set a dummy password hash since they use SSO
+            const dummyHash = await bcrypt.hash(Math.random().toString(36), 10);
+            const newUserResult = await pool.query(
+                'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
+                [name || email.split('@')[0], email, dummyHash]
+            );
+            user = newUserResult.rows[0];
+            console.log(`[SSO] Provisioned new user: ${email}`);
+        } else {
+            console.log(`[SSO] Logged in user: ${email}`);
+        }
+
+        // Generate our session token
+        const sessionToken = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET);
+        res.json({ token: sessionToken, user: { id: user.id, name: user.name, email: user.email } });
+
+    } catch (err) {
+        console.error('[SSO Error]', err.message);
+        res.status(401).json({ error: 'Invalid SSO token' });
+    }
+});
+
 // Lead Routes (Protected)
 app.get('/api/leads', authenticateToken, async (req, res) => {
     try {
