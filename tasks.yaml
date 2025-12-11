@@ -157,5 +157,26 @@ tasks:
     story: DashboardEnhancements
     phase: 7
     description: Implement Leads Table with Totals and Inline Editing
+    status: completed
+    file: /Users/user/Coding Stuff/growth-tracker/public/app.js
+
+  - id: T024
+    story: ReportsScreen
+    phase: 8
+    description: Add GET /api/leads/all endpoint
+    status: pending
+    file: /Users/user/Coding Stuff/growth-tracker/api/index.js
+
+  - id: T025
+    story: ReportsScreen
+    phase: 8
+    description: Update Reports View HTML & CSS
+    status: pending
+    file: /Users/user/Coding Stuff/growth-tracker/public/index.html
+
+  - id: T026
+    story: ReportsScreen
+    phase: 8
+    description: Implement Charts and Reports Logic
     status: pending
     file: /Users/user/Coding Stuff/growth-tracker/public/app.js

@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -99,13 +100,44 @@
             </section>
 
             <section id="reports-view" class="view hidden">
-                <h2>Performance Reports</h2>
-                <div class="charts-container">
-                    <div class="chart-placeholder">
-                        <p>Leads by Client (Coming Soon)</p>
+                <div class="container">
+                    <header style="margin-bottom: 2rem;">
+                        <h1>Performance Reports</h1>
+                    </header>
+
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h3>Leads by Status</h3>
+                            <div class="chart-container">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Value by Client</h3>
+                            <div class="chart-container">
+                                <canvas id="clientChart"></canvas>
+                            </div>
+                        </div>
                     </div>
-                    <div class="chart-placeholder">
-                        <p>Monthly Growth (Coming Soon)</p>
+
+                    <div class="leads-section" style="margin-top: 2rem;">
+                        <h2>All Business Leads</h2>
+                        <div class="table-responsive">
+                            <table id="all-leads-table">
+                                <thead>
+                                    <tr>
+                                        <th>Owner</th>
+                                        <th>Client</th>
+                                        <th>Project</th>
+                                        <th>Value</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-leads-list">
+                                    <!-- All leads injected here -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -214,7 +246,7 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=3"></script>
 </body>
 
 </html>

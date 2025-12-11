@@ -189,6 +189,22 @@ app.post('/api/dev/sso-token', async (req, res) => {
     }
 });
 
+// Get all leads (for reports) - Protected
+app.get('/api/leads/all', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT leads.*, users.name as owner_name 
+            FROM leads 
+            JOIN users ON leads.user_id = users.id 
+            ORDER BY leads.created_at DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Lead Routes (Protected)
 app.get('/api/leads', authenticateToken, async (req, res) => {
     try {

@@ -1,6 +1,8 @@
 const API_URL = '/api';
 let leads = [];
 let editingLeadId = null;
+let statusChartInstance = null;
+let clientChartInstance = null;
 
 // Check for token on load
 document.addEventListener('DOMContentLoaded', () => {
@@ -32,7 +34,35 @@ function displayUserInfo(token) {
     }
 }
 
+function switchView(viewName) {
+    // Hide all views
+    document.querySelectorAll('.view').forEach(el => {
+        el.classList.add('hidden');
+        el.classList.remove('visible'); // Ensure visible class is removed if used
+    });
+
+    // Show target view
+    const targetView = document.getElementById(`${viewName}-view`);
+    if (targetView) {
+        targetView.classList.remove('hidden');
+    }
+
+    // Update nav buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === viewName);
+    });
+
+    if (viewName === 'reports') {
+        fetchReportsData();
+    }
+}
+
 function setupEventListeners() {
+    // Navigation
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.onclick = () => switchView(btn.dataset.view);
+    });
+
     const modal = document.getElementById('lead-modal');
     const newLeadBtn = document.getElementById('new-lead-btn');
     const newLeadBtnDash = document.getElementById('new-lead-btn-dash');
@@ -118,6 +148,129 @@ function setupEventListeners() {
             }
         };
     }
+}
+
+async function fetchReportsData() {
+    try {
+        const token = localStorage.getItem('token');
+        console.log('Fetching reports data...');
+        const res = await fetch(`${API_URL}/leads/all`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+            const allLeads = await res.json();
+            console.log('Reports data received:', allLeads);
+            if (allLeads.length === 0) console.warn('No leads found for reports');
+
+            renderCharts(allLeads);
+            renderAllLeadsTable(allLeads);
+        } else {
+            console.error('Failed to fetch reports:', res.status, res.statusText);
+        }
+    } catch (err) {
+        console.error('Error fetching reports:', err);
+    }
+}
+
+function renderCharts(leads) {
+    console.log('Rendering charts with', leads.length, 'leads');
+
+    // 1. Status Pie Chart
+    const statusCounts = {};
+    leads.forEach(l => {
+        statusCounts[l.status] = (statusCounts[l.status] || 0) + 1;
+    });
+
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+
+    if (statusChartInstance) statusChartInstance.destroy();
+
+    statusChartInstance = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(statusCounts),
+            datasets: [{
+                data: Object.values(statusCounts),
+                backgroundColor: [
+                    '#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { color: '#94a3b8' } }
+            }
+        }
+    });
+
+    // 2. Client Bar Chart (Value)
+    const clientValues = {};
+    leads.forEach(l => {
+        clientValues[l.client] = (clientValues[l.client] || 0) + parseFloat(l.value);
+    });
+
+    // Sort by value and take top 5
+    const sortedClients = Object.entries(clientValues)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5);
+
+    const clientCtx = document.getElementById('clientChart').getContext('2d');
+
+    if (clientChartInstance) clientChartInstance.destroy();
+
+    clientChartInstance = new Chart(clientCtx, {
+        type: 'bar',
+        data: {
+            labels: sortedClients.map(([name]) => name),
+            datasets: [{
+                label: 'Total Value ($)',
+                data: sortedClients.map(([, val]) => val),
+                backgroundColor: '#6366f1',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#334155' },
+                    ticks: { color: '#94a3b8' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+}
+
+function renderAllLeadsTable(leads) {
+    const tbody = document.getElementById('all-leads-list');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    leads.forEach(lead => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${lead.owner_name || 'Unknown'}</td>
+            <td>${lead.client}</td>
+            <td>${lead.title}</td>
+            <td>$${parseFloat(lead.value).toLocaleString()}</td>
+            <td><span class="status-badge status-${lead.status.toLowerCase().replace(' ', '-')}">${lead.status}</span></td>
+        `;
+        tbody.appendChild(tr);
+    });
 }
 
 async function fetchLeads() {
@@ -222,11 +375,7 @@ function updateStats(currentLeads) {
     const closedLeads = wonLeads + lostLeads;
     const winRate = closedLeads > 0 ? Math.round((wonLeads / closedLeads) * 100) : 0;
 
-    totalLeadsEl.textContent = totalLeads;
-    activeValueEl.textContent = `$${activeValue.toLocaleString()}`;
-    winRateEl.textContent = `${winRate}%`;
 }
-
 // Inline Editing Functions
 window.editLead = (id) => {
     editingLeadId = id;
