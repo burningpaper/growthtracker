@@ -1,21 +1,9 @@
 const API_URL = '/api';
 let leads = [];
+window.allLeads = []; // Global for reports filtering
 let editingLeadId = null;
 let statusChartInstance = null;
 let clientChartInstance = null;
-
-// Check for token on load
-document.addEventListener('DOMContentLoaded', () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = 'login.html';
-        return;
-    }
-
-    displayUserInfo(token);
-    fetchLeads();
-    setupEventListeners();
-});
 
 function displayUserInfo(token) {
     try {
@@ -35,19 +23,16 @@ function displayUserInfo(token) {
 }
 
 function switchView(viewName) {
-    // Hide all views
     document.querySelectorAll('.view').forEach(el => {
         el.classList.add('hidden');
-        el.classList.remove('visible'); // Ensure visible class is removed if used
+        el.classList.remove('visible');
     });
 
-    // Show target view
     const targetView = document.getElementById(`${viewName}-view`);
     if (targetView) {
         targetView.classList.remove('hidden');
     }
 
-    // Update nav buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.view === viewName);
     });
@@ -58,7 +43,6 @@ function switchView(viewName) {
 }
 
 function setupEventListeners() {
-    // Navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.onclick = () => switchView(btn.dataset.view);
     });
@@ -69,25 +53,32 @@ function setupEventListeners() {
     const closeBtn = document.querySelector('.close-modal');
     const form = document.getElementById('lead-form');
     const logoutBtn = document.getElementById('logout-btn');
-    const clientFilter = document.getElementById('client-filter');
+
+    // Filter Event Listeners
+    ['dash', 'report'].forEach(prefix => {
+        const ids = [`${prefix}-filter-client`, `${prefix}-filter-month`, `${prefix}-filter-status`];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', () => filterLeads(prefix));
+            }
+        });
+    });
 
     const openModal = () => {
         modal.classList.remove('hidden');
-        // Small timeout to allow display:flex to apply before opacity transition
         setTimeout(() => modal.classList.add('visible'), 10);
     };
 
     const closeModal = () => {
         modal.classList.remove('visible');
-        setTimeout(() => modal.classList.add('hidden'), 300); // Wait for transition
+        setTimeout(() => modal.classList.add('hidden'), 300);
     };
 
     if (newLeadBtn) newLeadBtn.onclick = openModal;
     if (newLeadBtnDash) newLeadBtnDash.onclick = openModal;
 
-    if (closeBtn) {
-        closeBtn.onclick = closeModal;
-    }
+    if (closeBtn) closeBtn.onclick = closeModal;
 
     window.onclick = (event) => {
         if (event.target == modal) closeModal();
@@ -101,23 +92,17 @@ function setupEventListeners() {
         };
     }
 
-    if (clientFilter) {
-        clientFilter.addEventListener('input', (e) => {
-            filterLeads(e.target.value);
-        });
-    }
-
     if (form) {
         form.onsubmit = async (e) => {
             e.preventDefault();
 
             const leadData = {
-                client: document.getElementById('client-name').value, // Fixed ID
-                title: document.getElementById('opportunity-title').value, // Fixed ID
-                date: document.getElementById('lead-date').value, // Fixed ID
-                value: parseFloat(document.getElementById('lead-value').value), // Fixed ID
-                likelihood: parseInt(document.getElementById('lead-likelihood').value), // Fixed ID
-                status: document.getElementById('lead-status').value // Fixed ID
+                client: document.getElementById('client-name').value,
+                title: document.getElementById('opportunity-title').value,
+                date: document.getElementById('lead-date').value,
+                value: parseFloat(document.getElementById('lead-value').value),
+                likelihood: parseInt(document.getElementById('lead-likelihood').value),
+                status: document.getElementById('lead-status').value
             };
 
             try {
@@ -134,7 +119,6 @@ function setupEventListeners() {
                 if (res.ok) {
                     modal.style.display = 'none';
                     form.reset();
-                    // Reset range output
                     const range = document.getElementById('lead-likelihood');
                     if (range && range.nextElementSibling) range.nextElementSibling.value = '50%';
 
@@ -160,9 +144,12 @@ async function fetchReportsData() {
 
         if (res.ok) {
             const allLeads = await res.json();
+            window.allLeads = allLeads;
             console.log('Reports data received:', allLeads);
+
             if (allLeads.length === 0) console.warn('No leads found for reports');
 
+            populateFilters(allLeads, 'report');
             renderCharts(allLeads);
             renderAllLeadsTable(allLeads);
         } else {
@@ -176,14 +163,12 @@ async function fetchReportsData() {
 function renderCharts(leads) {
     console.log('Rendering charts with', leads.length, 'leads');
 
-    // 1. Status Pie Chart
     const statusCounts = {};
     leads.forEach(l => {
         statusCounts[l.status] = (statusCounts[l.status] || 0) + 1;
     });
 
     const statusCtx = document.getElementById('statusChart').getContext('2d');
-
     if (statusChartInstance) statusChartInstance.destroy();
 
     statusChartInstance = new Chart(statusCtx, {
@@ -192,34 +177,27 @@ function renderCharts(leads) {
             labels: Object.keys(statusCounts),
             datasets: [{
                 data: Object.values(statusCounts),
-                backgroundColor: [
-                    '#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'
-                ],
+                backgroundColor: ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
                 borderWidth: 0
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'right', labels: { color: '#94a3b8' } }
-            }
+            plugins: { legend: { position: 'right', labels: { color: '#94a3b8' } } }
         }
     });
 
-    // 2. Client Bar Chart (Value)
     const clientValues = {};
     leads.forEach(l => {
         clientValues[l.client] = (clientValues[l.client] || 0) + parseFloat(l.value);
     });
 
-    // Sort by value and take top 5
     const sortedClients = Object.entries(clientValues)
         .sort(([, a], [, b]) => b - a)
         .slice(0, 5);
 
     const clientCtx = document.getElementById('clientChart').getContext('2d');
-
     if (clientChartInstance) clientChartInstance.destroy();
 
     clientChartInstance = new Chart(clientCtx, {
@@ -237,19 +215,10 @@ function renderCharts(leads) {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: '#334155' },
-                    ticks: { color: '#94a3b8' }
-                },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#94a3b8' }
-                }
+                y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
             },
-            plugins: {
-                legend: { display: false }
-            }
+            plugins: { legend: { display: false } }
         }
     });
 }
@@ -287,6 +256,7 @@ async function fetchLeads() {
         }
 
         leads = await res.json();
+        populateFilters(leads, 'dash');
         renderLeadsTable(leads);
         updateStats(leads);
     } catch (err) {
@@ -294,13 +264,82 @@ async function fetchLeads() {
     }
 }
 
-function filterLeads(query) {
-    const lowerQuery = query.toLowerCase();
-    const filtered = leads.filter(lead =>
-        lead.client.toLowerCase().includes(lowerQuery)
-    );
-    renderLeadsTable(filtered);
-    updateFooterTotal(filtered);
+function populateFilters(data, prefix) {
+    const clientSelect = document.getElementById(`${prefix}-filter-client`);
+    const monthSelect = document.getElementById(`${prefix}-filter-month`);
+
+    if (!clientSelect || !monthSelect) return;
+
+    const clients = [...new Set(data.map(l => l.client))].sort();
+    const months = [...new Set(data.map(l => {
+        const d = new Date(l.date);
+        return `${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+    }))].sort().reverse();
+
+    const currentClient = clientSelect.value;
+    const currentMonth = monthSelect.value;
+
+    clientSelect.innerHTML = '<option value="">All Clients</option>';
+    clients.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        clientSelect.appendChild(opt);
+    });
+
+    monthSelect.innerHTML = '<option value="">All Months</option>';
+    months.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        monthSelect.appendChild(opt);
+    });
+
+    if (clients.includes(currentClient)) clientSelect.value = currentClient;
+    if (months.includes(currentMonth)) monthSelect.value = currentMonth;
+}
+
+function applyFilters(data, prefix) {
+    const clientVal = document.getElementById(`${prefix}-filter-client`).value;
+    const monthVal = document.getElementById(`${prefix}-filter-month`).value;
+    const statusVal = document.getElementById(`${prefix}-filter-status`).value;
+
+    console.log(`Filtering ${prefix}:`, { clientVal, monthVal, statusVal, totalData: data.length });
+
+    return data.filter(lead => {
+        const leadDate = new Date(lead.date);
+        const leadMonth = `${String(leadDate.getMonth() + 1).padStart(2, '0')}-${leadDate.getFullYear()}`;
+
+        const matchClient = !clientVal || lead.client === clientVal;
+        const matchMonth = !monthVal || leadMonth === monthVal;
+        const matchStatus = !statusVal || lead.status === statusVal;
+
+        return matchClient && matchMonth && matchStatus;
+    });
+}
+
+function filterLeads(prefix) {
+    let dataToFilter = [];
+    let renderFunc = null;
+
+    if (prefix === 'dash') {
+        dataToFilter = leads;
+        renderFunc = renderLeadsTable;
+    } else if (prefix === 'report') {
+        dataToFilter = window.allLeads || [];
+        renderFunc = renderAllLeadsTable;
+    }
+
+    console.log(`filterLeads called for ${prefix}. Data size: ${dataToFilter.length}`);
+
+    const filtered = applyFilters(dataToFilter, prefix);
+    console.log(`Filtered result: ${filtered.length} leads`);
+
+    renderFunc(filtered);
+
+    if (prefix === 'dash') {
+        updateFooterTotal(filtered);
+    }
 }
 
 function renderLeadsTable(leadsToRender) {
@@ -311,9 +350,7 @@ function renderLeadsTable(leadsToRender) {
 
     leadsToRender.forEach(lead => {
         const tr = document.createElement('tr');
-
         if (editingLeadId === lead.id) {
-            // Render Edit Mode
             tr.innerHTML = `
                 <td><input type="text" class="edit-input" id="edit-client-${lead.id}" value="${lead.client}"></td>
                 <td><input type="text" class="edit-input" id="edit-title-${lead.id}" value="${lead.title}"></td>
@@ -334,7 +371,6 @@ function renderLeadsTable(leadsToRender) {
                 </td>
             `;
         } else {
-            // Render View Mode
             tr.innerHTML = `
                 <td>${lead.client}</td>
                 <td>${lead.title}</td>
@@ -374,19 +410,17 @@ function updateStats(currentLeads) {
     const lostLeads = currentLeads.filter(l => l.status === 'Lost').length;
     const closedLeads = wonLeads + lostLeads;
     const winRate = closedLeads > 0 ? Math.round((wonLeads / closedLeads) * 100) : 0;
-
 }
+
 // Inline Editing Functions
 window.editLead = (id) => {
     editingLeadId = id;
-    const filterVal = document.getElementById('client-filter').value;
-    filterLeads(filterVal);
+    filterLeads('dash');
 };
 
 window.cancelEdit = () => {
     editingLeadId = null;
-    const filterVal = document.getElementById('client-filter').value;
-    filterLeads(filterVal);
+    filterLeads('dash');
 };
 
 window.saveLead = async (id) => {
@@ -421,3 +455,16 @@ window.saveLead = async (id) => {
         alert('Error connecting to server');
     }
 };
+
+// Initialization
+document.addEventListener('DOMContentLoaded', () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    displayUserInfo(token);
+    fetchLeads();
+    setupEventListeners();
+});

@@ -65,9 +65,21 @@
                         <div class="section-header"
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                             <h2>My Opportunities</h2>
-                            <div class="filter-container">
-                                <input type="text" id="client-filter" placeholder="Filter by Client..."
-                                    style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                            <div class="filter-bar">
+                                <select id="dash-filter-client" class="filter-select">
+                                    <option value="">All Clients</option>
+                                </select>
+                                <select id="dash-filter-month" class="filter-select">
+                                    <option value="">All Months</option>
+                                </select>
+                                <select id="dash-filter-status" class="filter-select">
+                                    <option value="">All Statuses</option>
+                                    <option value="Identified">Identified</option>
+                                    <option value="Contacted">Contacted</option>
+                                    <option value="Proposal Sent">Proposal Sent</option>
+                                    <option value="Won">Won</option>
+                                    <option value="Lost">Lost</option>
+                                </select>
                             </div>
                         </div>
 
@@ -122,6 +134,22 @@
 
                     <div class="leads-section" style="margin-top: 2rem;">
                         <h2>All Business Leads</h2>
+                        <div class="filter-bar">
+                            <select id="report-filter-client" class="filter-select">
+                                <option value="">All Clients</option>
+                            </select>
+                            <select id="report-filter-month" class="filter-select">
+                                <option value="">All Months</option>
+                            </select>
+                            <select id="report-filter-status" class="filter-select">
+                                <option value="">All Statuses</option>
+                                <option value="Identified">Identified</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="Proposal Sent">Proposal Sent</option>
+                                <option value="Won">Won</option>
+                                <option value="Lost">Lost</option>
+                            </select>
+                        </div>
                         <div class="table-responsive">
                             <table id="all-leads-table">
                                 <thead>
@@ -246,7 +274,7 @@
         </div>
     </div>
 
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=9"></script>
 </body>
 
 </html>
