@@ -205,7 +205,7 @@ function renderCharts(leads) {
         data: {
             labels: sortedClients.map(([name]) => name),
             datasets: [{
-                label: 'Total Value ($)',
+                label: 'Total Value (R)',
                 data: sortedClients.map(([, val]) => val),
                 backgroundColor: '#6366f1',
                 borderRadius: 4
@@ -235,7 +235,7 @@ function renderAllLeadsTable(leads) {
             <td>${lead.owner_name || 'Unknown'}</td>
             <td>${lead.client}</td>
             <td>${lead.title}</td>
-            <td>$${parseFloat(lead.value).toLocaleString()}</td>
+            <td>R${parseFloat(lead.value).toLocaleString()}</td>
             <td><span class="status-badge status-${lead.status.toLowerCase().replace(' ', '-')}">${lead.status}</span></td>
         `;
         tbody.appendChild(tr);
@@ -374,7 +374,7 @@ function renderLeadsTable(leadsToRender) {
             tr.innerHTML = `
                 <td>${lead.client}</td>
                 <td>${lead.title}</td>
-                <td>$${parseFloat(lead.value).toLocaleString()}</td>
+                <td>R${parseFloat(lead.value).toLocaleString()}</td>
                 <td><span class="status-badge status-${lead.status.toLowerCase().replace(' ', '-')}">${lead.status}</span></td>
                 <td>${lead.likelihood}%</td>
                 <td>
@@ -393,7 +393,7 @@ function updateFooterTotal(currentLeads) {
     if (!footerVal) return;
 
     const totalValue = currentLeads.reduce((sum, lead) => sum + parseFloat(lead.value || 0), 0);
-    footerVal.textContent = `$${totalValue.toLocaleString()}`;
+    footerVal.textContent = `R${totalValue.toLocaleString()}`;
 }
 
 function updateStats(currentLeads) {
@@ -410,6 +410,10 @@ function updateStats(currentLeads) {
     const lostLeads = currentLeads.filter(l => l.status === 'Lost').length;
     const closedLeads = wonLeads + lostLeads;
     const winRate = closedLeads > 0 ? Math.round((wonLeads / closedLeads) * 100) : 0;
+
+    totalLeadsEl.textContent = totalLeads;
+    activeValueEl.textContent = `R${activeValue.toLocaleString()}`;
+    winRateEl.textContent = `${winRate}%`;
 }
 
 // Inline Editing Functions
