@@ -81,18 +81,47 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// Helper to format PEM keys
+const formatKey = (key, type) => {
+    if (!key) return null;
+
+    // Detect header type
+    const isRSA = key.includes('RSA PRIVATE KEY') || key.includes('RSA PUBLIC KEY');
+    const algo = isRSA ? 'RSA ' : '';
+
+    // Remove all whitespace and literal newlines first
+    let clean = key.replace(/\\n/g, '').replace(/\s+/g, '');
+
+    // Strip existing headers
+    clean = clean.replace(/-----BEGIN[A-Z ]+-----/g, '').replace(/-----END[A-Z ]+-----/g, '');
+
+    // Chunk body into 64 chars
+    const chunked = clean.match(/.{1,64}/g).join('\n');
+
+    // Re-wrap with correct header
+    const header = type === 'PUBLIC'
+        ? `-----BEGIN ${algo}PUBLIC KEY-----`
+        : `-----BEGIN ${algo}PRIVATE KEY-----`;
+    const footer = type === 'PUBLIC'
+        ? `-----END ${algo}PUBLIC KEY-----`
+        : `-----END ${algo}PRIVATE KEY-----`;
+
+    return `${header}\n${chunked}\n${footer}`;
+};
+
 app.post('/api/auth/sso', async (req, res) => {
     const { token } = req.body;
-    const ssoPublicKey = process.env.SSO_PUBLIC_KEY;
-
-    if (!ssoPublicKey) {
-        console.error('SSO_PUBLIC_KEY not configured');
-        return res.status(500).json({ error: 'SSO configuration error' });
-    }
 
     try {
-        // Verify the token using the Public Key (RS256)
-        const decoded = jwt.verify(token, ssoPublicKey, { algorithms: ['RS256'] });
+        const rawKey = process.env.SSO_PUBLIC_KEY;
+        if (!rawKey) throw new Error('SSO_PUBLIC_KEY not configured');
+
+        const formattedKey = formatKey(rawKey, 'PUBLIC');
+        // Validate key
+        const publicKey = require('crypto').createPublicKey(formattedKey);
+
+        // Verify the token using the Public Key Object
+        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
         const { email, name } = decoded;
 
         if (!email) {
@@ -105,7 +134,6 @@ app.post('/api/auth/sso', async (req, res) => {
 
         if (!user) {
             // Provision new user
-            // Note: We set a dummy password hash since they use SSO
             const dummyHash = await bcrypt.hash(Math.random().toString(36), 10);
             const newUserResult = await pool.query(
                 'INSERT INTO users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email',
@@ -117,31 +145,47 @@ app.post('/api/auth/sso', async (req, res) => {
             console.log(`[SSO] Logged in user: ${email}`);
         }
 
-        // Generate our session token
         const sessionToken = jwt.sign({ id: user.id, name: user.name }, JWT_SECRET);
         res.json({ token: sessionToken, user: { id: user.id, name: user.name, email: user.email } });
 
     } catch (err) {
         console.error('[SSO Error]', err.message);
-        res.status(401).json({ error: 'Invalid SSO token' });
+        res.status(401).json({ error: 'Invalid SSO token: ' + err.message });
     }
 });
 
 // Dev Endpoint to Generate SSO Token (For Testing)
 app.post('/api/dev/sso-token', async (req, res) => {
     const { email, name } = req.body;
-    const ssoPrivateKey = process.env.SSO_PRIVATE_KEY;
-
-    if (!ssoPrivateKey) {
-        return res.status(500).json({ error: 'SSO_PRIVATE_KEY not configured' });
-    }
 
     try {
-        const token = jwt.sign({ email, name }, ssoPrivateKey, { algorithm: 'RS256', expiresIn: '1h' });
+        const rawKey = process.env.SSO_PRIVATE_KEY;
+        if (!rawKey) throw new Error('SSO_PRIVATE_KEY not configured');
+
+        let formattedKey = formatKey(rawKey, 'PRIVATE');
+        let privateKey;
+
+        try {
+            privateKey = require('crypto').createPrivateKey(formattedKey);
+        } catch (e) {
+            console.log('Failed to parse with default header, trying RSA header...');
+            // Try forcing RSA header
+            const clean = rawKey.replace(/\\n/g, '').replace(/\s+/g, '')
+                .replace(/-----BEGIN[A-Z ]+-----/g, '').replace(/-----END[A-Z ]+-----/g, '');
+            const chunked = clean.match(/.{1,64}/g).join('\n');
+            formattedKey = `-----BEGIN RSA PRIVATE KEY-----\n${chunked}\n-----END RSA PRIVATE KEY-----`;
+            try {
+                privateKey = require('crypto').createPrivateKey(formattedKey);
+            } catch (e2) {
+                throw e; // Throw original error if both fail
+            }
+        }
+
+        const token = jwt.sign({ email, name }, privateKey, { algorithm: 'RS256', expiresIn: '1h' });
         res.json({ token });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Error generating token' });
+        console.error('SSO Token Generation Error:', err.message);
+        res.status(500).json({ error: 'Error generating token: ' + err.message });
     }
 });
 
