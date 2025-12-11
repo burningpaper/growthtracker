@@ -145,3 +145,17 @@ tasks:
     description: Create SSO Test Harness (Token Generator & Test Page)
     status: completed
     file: /Users/user/Coding Stuff/growth-tracker/public/sso-test.html
+
+  - id: T022
+    story: DashboardEnhancements
+    phase: 7
+    description: Add User Info and Filter to Dashboard
+    status: pending
+    file: /Users/user/Coding Stuff/growth-tracker/public/index.html
+
+  - id: T023
+    story: DashboardEnhancements
+    phase: 7
+    description: Implement Leads Table with Totals and Inline Editing
+    status: pending
+    file: /Users/user/Coding Stuff/growth-tracker/public/app.js

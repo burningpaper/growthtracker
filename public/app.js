@@ -1,273 +1,274 @@
-// App State Management
-const state = {
-    leads: [],
-    view: 'dashboard',
-    user: JSON.parse(localStorage.getItem('user')) || null
-};
+const API_URL = '/api';
+let leads = [];
+let editingLeadId = null;
 
-// Auth Check
-const token = localStorage.getItem('token');
-if (!token) {
-    window.location.href = 'login.html';
-}
-
-const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000/api' : '/api';
-
-// DOM Elements
-const elements = {
-    navBtns: document.querySelectorAll('.nav-btn'),
-    views: document.querySelectorAll('.view'),
-    newLeadBtn: document.getElementById('new-lead-btn'),
-    leadModal: document.getElementById('lead-modal'),
-    closeModalBtns: document.querySelectorAll('.close-modal'),
-    leadForm: document.getElementById('lead-form'),
-    leadsList: document.getElementById('leads-list'),
-    totalLeads: document.getElementById('total-leads-count'),
-    activeValue: document.getElementById('active-value-sum'),
-    winRate: document.getElementById('win-rate-calc'),
-    logoutBtn: document.getElementById('logout-btn')
-};
-
-// Event Listeners
+// Check for token on load
 document.addEventListener('DOMContentLoaded', () => {
-    loadLeads();
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    displayUserInfo(token);
+    fetchLeads();
     setupEventListeners();
-    updateUserUI();
 });
 
-function setupEventListeners() {
-    // Navigation
-    elements.navBtns.forEach(btn => {
-        btn.addEventListener('click', () => switchView(btn.dataset.view));
-    });
-
-    // Modal
-    elements.newLeadBtn.addEventListener('click', () => toggleModal(true));
-    elements.closeModalBtns.forEach(btn => {
-        btn.addEventListener('click', () => toggleModal(false));
-    });
-
-    // Form
-    elements.leadForm.addEventListener('submit', handleNewLead);
-
-    // Logout
-    if (elements.logoutBtn) {
-        elements.logoutBtn.addEventListener('click', logout);
-    }
-}
-
-function updateUserUI() {
-    if (state.user) {
-        // Could update UI with user name here
-        console.log('Logged in as:', state.user.name);
-    }
-}
-
-function logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = 'login.html';
-}
-
-// Logic
-async function loadLeads() {
+function displayUserInfo(token) {
     try {
-        const response = await fetch(`${API_URL}/leads`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userInfoDiv = document.getElementById('user-info');
+        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+        const name = payload.name || storedUser.name || 'User';
+        const email = payload.email || storedUser.email || '';
+
+        if (userInfoDiv) {
+            userInfoDiv.innerHTML = `<strong>${name}</strong> <span style="opacity: 0.7;">(${email})</span>`;
+        }
+    } catch (e) {
+        console.error('Error parsing user info', e);
+    }
+}
+
+function setupEventListeners() {
+    const modal = document.getElementById('lead-modal');
+    const newLeadBtn = document.getElementById('new-lead-btn');
+    const newLeadBtnDash = document.getElementById('new-lead-btn-dash');
+    const closeBtn = document.querySelector('.close-modal');
+    const form = document.getElementById('lead-form');
+    const logoutBtn = document.getElementById('logout-btn');
+    const clientFilter = document.getElementById('client-filter');
+
+    const openModal = () => {
+        modal.classList.remove('hidden');
+        // Small timeout to allow display:flex to apply before opacity transition
+        setTimeout(() => modal.classList.add('visible'), 10);
+    };
+
+    const closeModal = () => {
+        modal.classList.remove('visible');
+        setTimeout(() => modal.classList.add('hidden'), 300); // Wait for transition
+    };
+
+    if (newLeadBtn) newLeadBtn.onclick = openModal;
+    if (newLeadBtnDash) newLeadBtnDash.onclick = openModal;
+
+    if (closeBtn) {
+        closeBtn.onclick = closeModal;
+    }
+
+    window.onclick = (event) => {
+        if (event.target == modal) closeModal();
+    };
+
+    if (logoutBtn) {
+        logoutBtn.onclick = () => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = 'login.html';
+        };
+    }
+
+    if (clientFilter) {
+        clientFilter.addEventListener('input', (e) => {
+            filterLeads(e.target.value);
+        });
+    }
+
+    if (form) {
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+
+            const leadData = {
+                client: document.getElementById('client-name').value, // Fixed ID
+                title: document.getElementById('opportunity-title').value, // Fixed ID
+                date: document.getElementById('lead-date').value, // Fixed ID
+                value: parseFloat(document.getElementById('lead-value').value), // Fixed ID
+                likelihood: parseInt(document.getElementById('lead-likelihood').value), // Fixed ID
+                status: document.getElementById('lead-status').value // Fixed ID
+            };
+
+            try {
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${API_URL}/leads`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(leadData)
+                });
+
+                if (res.ok) {
+                    modal.style.display = 'none';
+                    form.reset();
+                    // Reset range output
+                    const range = document.getElementById('lead-likelihood');
+                    if (range && range.nextElementSibling) range.nextElementSibling.value = '50%';
+
+                    fetchLeads();
+                } else {
+                    alert('Error creating lead');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error connecting to server');
             }
+        };
+    }
+}
+
+async function fetchLeads() {
+    try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/leads`, {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (response.status === 401 || response.status === 403) {
-            logout();
+        if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
             return;
         }
 
-        const leads = await response.json();
-        state.leads = leads;
-        renderDashboard();
-    } catch (error) {
-        console.error('Failed to load leads:', error);
+        leads = await res.json();
+        renderLeadsTable(leads);
+        updateStats(leads);
+    } catch (err) {
+        console.error(err);
     }
 }
 
-function toggleModal(show) {
-    if (show) {
-        elements.leadModal.classList.remove('hidden');
-        setTimeout(() => elements.leadModal.classList.add('visible'), 10);
-    } else {
-        elements.leadModal.classList.remove('visible');
-        setTimeout(() => elements.leadModal.classList.add('hidden'), 300);
-    }
+function filterLeads(query) {
+    const lowerQuery = query.toLowerCase();
+    const filtered = leads.filter(lead =>
+        lead.client.toLowerCase().includes(lowerQuery)
+    );
+    renderLeadsTable(filtered);
+    updateFooterTotal(filtered);
 }
 
-async function handleNewLead(e) {
-    e.preventDefault();
+function renderLeadsTable(leadsToRender) {
+    const tbody = document.getElementById('leads-list');
+    if (!tbody) return;
 
-    const formData = {
-        client: document.getElementById('client-name').value,
-        title: document.getElementById('opportunity-title').value,
-        date: document.getElementById('lead-date').value,
-        value: parseFloat(document.getElementById('lead-value').value),
-        likelihood: parseInt(document.getElementById('lead-likelihood').value),
-        status: document.getElementById('lead-status').value
+    tbody.innerHTML = '';
+
+    leadsToRender.forEach(lead => {
+        const tr = document.createElement('tr');
+
+        if (editingLeadId === lead.id) {
+            // Render Edit Mode
+            tr.innerHTML = `
+                <td><input type="text" class="edit-input" id="edit-client-${lead.id}" value="${lead.client}"></td>
+                <td><input type="text" class="edit-input" id="edit-title-${lead.id}" value="${lead.title}"></td>
+                <td><input type="number" class="edit-input" id="edit-value-${lead.id}" value="${lead.value}"></td>
+                <td>
+                    <select class="edit-input" id="edit-status-${lead.id}">
+                        <option value="Identified" ${lead.status === 'Identified' ? 'selected' : ''}>Identified</option>
+                        <option value="Contacted" ${lead.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
+                        <option value="Proposal Sent" ${lead.status === 'Proposal Sent' ? 'selected' : ''}>Proposal Sent</option>
+                        <option value="Won" ${lead.status === 'Won' ? 'selected' : ''}>Won</option>
+                        <option value="Lost" ${lead.status === 'Lost' ? 'selected' : ''}>Lost</option>
+                    </select>
+                </td>
+                <td><input type="number" class="edit-input" id="edit-likelihood-${lead.id}" value="${lead.likelihood}"></td>
+                <td>
+                    <button class="btn-sm btn-save" onclick="saveLead(${lead.id})">Save</button>
+                    <button class="btn-sm btn-cancel" onclick="cancelEdit()">Cancel</button>
+                </td>
+            `;
+        } else {
+            // Render View Mode
+            tr.innerHTML = `
+                <td>${lead.client}</td>
+                <td>${lead.title}</td>
+                <td>$${parseFloat(lead.value).toLocaleString()}</td>
+                <td><span class="status-badge status-${lead.status.toLowerCase().replace(' ', '-')}">${lead.status}</span></td>
+                <td>${lead.likelihood}%</td>
+                <td>
+                    <button class="btn-sm btn-edit" onclick="editLead(${lead.id})">Edit</button>
+                </td>
+            `;
+        }
+        tbody.appendChild(tr);
+    });
+
+    updateFooterTotal(leadsToRender);
+}
+
+function updateFooterTotal(currentLeads) {
+    const footerVal = document.getElementById('total-value-footer');
+    if (!footerVal) return;
+
+    const totalValue = currentLeads.reduce((sum, lead) => sum + parseFloat(lead.value || 0), 0);
+    footerVal.textContent = `$${totalValue.toLocaleString()}`;
+}
+
+function updateStats(currentLeads) {
+    const totalLeadsEl = document.getElementById('total-leads');
+    const activeValueEl = document.getElementById('active-value');
+    const winRateEl = document.getElementById('win-rate');
+
+    if (!totalLeadsEl || !activeValueEl || !winRateEl) return;
+
+    const totalLeads = currentLeads.length;
+    const activeLeads = currentLeads.filter(l => l.status !== 'Won' && l.status !== 'Lost');
+    const activeValue = activeLeads.reduce((sum, l) => sum + parseFloat(l.value || 0), 0);
+    const wonLeads = currentLeads.filter(l => l.status === 'Won').length;
+    const lostLeads = currentLeads.filter(l => l.status === 'Lost').length;
+    const closedLeads = wonLeads + lostLeads;
+    const winRate = closedLeads > 0 ? Math.round((wonLeads / closedLeads) * 100) : 0;
+
+    totalLeadsEl.textContent = totalLeads;
+    activeValueEl.textContent = `$${activeValue.toLocaleString()}`;
+    winRateEl.textContent = `${winRate}%`;
+}
+
+// Inline Editing Functions
+window.editLead = (id) => {
+    editingLeadId = id;
+    const filterVal = document.getElementById('client-filter').value;
+    filterLeads(filterVal);
+};
+
+window.cancelEdit = () => {
+    editingLeadId = null;
+    const filterVal = document.getElementById('client-filter').value;
+    filterLeads(filterVal);
+};
+
+window.saveLead = async (id) => {
+    const updatedLead = {
+        client: document.getElementById(`edit-client-${id}`).value,
+        title: document.getElementById(`edit-title-${id}`).value,
+        value: parseFloat(document.getElementById(`edit-value-${id}`).value),
+        status: document.getElementById(`edit-status-${id}`).value,
+        likelihood: parseInt(document.getElementById(`edit-likelihood-${id}`).value),
+        date: new Date().toISOString()
     };
 
     try {
-        const response = await fetch(`${API_URL}/leads`, {
-            method: 'POST',
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/leads/${id}`, {
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(formData)
+            body: JSON.stringify(updatedLead)
         });
 
-        if (response.ok) {
-            const newLead = await response.json();
-            state.leads.unshift(newLead);
-            renderDashboard();
-
-            elements.leadForm.reset();
-            document.querySelector('output').textContent = '50%';
-            toggleModal(false);
+        if (res.ok) {
+            editingLeadId = null;
+            fetchLeads();
+        } else {
+            alert('Error updating lead');
         }
-    } catch (error) {
-        console.error('Failed to create lead:', error);
-        alert('Error saving lead. Please try again.');
+    } catch (err) {
+        console.error(err);
+        alert('Error connecting to server');
     }
-}
-
-function switchView(viewName) {
-    state.view = viewName;
-
-    elements.navBtns.forEach(btn => {
-        if (btn.dataset.view === viewName) btn.classList.add('active');
-        else btn.classList.remove('active');
-    });
-
-    elements.views.forEach(view => {
-        if (view.id === `${viewName}-view`) view.classList.remove('hidden');
-        else view.classList.add('hidden');
-    });
-
-    if (viewName === 'reports') {
-        renderReports();
-    }
-}
-
-function renderDashboard() {
-    // Stats
-    elements.totalLeads.textContent = state.leads.length;
-
-    const activeLeads = state.leads.filter(l => l.status !== 'won' && l.status !== 'lost');
-    const totalValue = activeLeads.reduce((sum, l) => sum + Number(l.value), 0);
-    elements.activeValue.textContent = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(totalValue);
-
-    const wonCount = state.leads.filter(l => l.status === 'won').length;
-    const closedCount = state.leads.filter(l => l.status === 'won' || l.status === 'lost').length;
-    const winRate = closedCount > 0 ? Math.round((wonCount / closedCount) * 100) : 0;
-    elements.winRate.textContent = `${winRate}%`;
-
-    // List
-    elements.leadsList.innerHTML = '';
-
-    if (state.leads.length === 0) {
-        elements.leadsList.innerHTML = `
-            <div class="empty-state">
-                <p>No leads found. Start by adding a new opportunity!</p>
-            </div>
-        `;
-        return;
-    }
-
-    state.leads.forEach(lead => {
-        const card = document.createElement('div');
-        card.className = 'lead-card';
-        card.innerHTML = `
-                <span>${lead.likelihood}% Prob.</span>
-            </div>
-            <div style="font-size: 1.2rem; font-weight: 700; color: var(--text-main);">
-                ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(lead.value)}
-            </div>
-        `;
-        elements.leadsList.appendChild(card);
-    });
-}
-
-function renderReports() {
-    const container = document.querySelector('.charts-container');
-    container.innerHTML = '';
-    container.style.display = 'grid';
-    container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
-    container.style.gap = '20px';
-
-    // Helper to create chart card
-    const createChartCard = (title, contentHtml) => {
-        const card = document.createElement('div');
-        card.style.background = 'var(--surface-dark)';
-        card.style.padding = '20px';
-        card.style.borderRadius = 'var(--radius-md)';
-        card.style.border = '1px solid var(--surface-light)';
-        card.innerHTML = `<h3 style="margin-bottom:15px; color:var(--text-muted); font-size:0.9rem; text-transform:uppercase;">${title}</h3>${contentHtml}`;
-        return card;
-    };
-
-    // 1. Leads by Status
-    const statusCounts = state.leads.reduce((acc, lead) => {
-        acc[lead.status] = (acc[lead.status] || 0) + 1;
-        return acc;
-    }, {});
-
-    let statusHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
-    for (const [status, count] of Object.entries(statusCounts)) {
-        const percentage = Math.round((count / state.leads.length) * 100);
-        statusHtml += `
-            <div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.9rem;">
-                    <span style="text-transform:capitalize;">${status}</span>
-                    <span>${count} (${percentage}%)</span>
-                </div>
-                <div style="height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
-                    <div style="height:100%; width:${percentage}%; background:var(--primary-color);"></div>
-                </div>
-            </div>
-        `;
-    }
-    statusHtml += '</div>';
-    container.appendChild(createChartCard('Leads by Status', statusHtml));
-
-    // 2. Value by Client (Top 5)
-    const clientValues = state.leads.reduce((acc, lead) => {
-        acc[lead.client] = (acc[lead.client] || 0) + lead.value;
-        return acc;
-    }, {});
-
-    const sortedClients = Object.entries(clientValues)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5);
-
-    let clientHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
-    const maxValue = sortedClients.length > 0 ? sortedClients[0][1] : 0;
-
-    for (const [client, value] of sortedClients) {
-        const percentage = maxValue > 0 ? (value / maxValue) * 100 : 0;
-        clientHtml += `
-            <div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:4px; font-size:0.9rem;">
-                    <span>${client}</span>
-                    <span>${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(value)}</span>
-                </div>
-                <div style="height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">
-                    <div style="height:100%; width:${percentage}%; background:var(--secondary-color);"></div>
-                </div>
-            </div>
-        `;
-    }
-    clientHtml += '</div>';
-    container.appendChild(createChartCard('Top Clients by Value', clientHtml));
-}
-
-
-// Run
-init();
+};

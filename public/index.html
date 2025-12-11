@@ -31,27 +31,68 @@
         <main id="main-content">
             <!-- Views will be injected here -->
             <section id="dashboard-view" class="view active">
-                <div class="pipeline-summary">
-                    <div class="summary-card">
-                        <h3>Total Leads</h3>
-                        <p class="summary-value" id="total-leads-count">0</p>
-                    </div>
-                    <div class="summary-card">
-                        <h3>Active Value</h3>
-                        <p class="summary-value" id="active-value-sum">$0</p>
-                    </div>
-                    <div class="summary-card">
-                        <h3>Win Rate</h3>
-                        <p class="summary-value" id="win-rate-calc">0%</p>
-                    </div>
-                </div>
+                <div class="container">
+                    <header>
+                        <div class="header-content">
+                            <h1>Growth Tracker</h1>
+                            <div id="user-info" style="font-size: 0.9rem; color: #666; margin-top: 0.25rem;">
+                                <!-- User details will be injected here -->
+                            </div>
+                        </div>
+                        <div class="header-actions">
+                            <button id="new-lead-btn-dash" class="btn-primary">+ New Lead</button>
+                            <button id="logout-btn" class="btn-secondary">Logout</button>
+                        </div>
+                    </header>
 
-                <div class="leads-list-container">
-                    <h2>Recent Opportunities</h2>
-                    <div id="leads-list" class="leads-grid">
-                        <!-- Lead cards will go here -->
-                        <div class="empty-state">
-                            <p>No leads found. Start by adding a new opportunity!</p>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Total Leads</h3>
+                            <p class="stat-value" id="total-leads">0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Active Value</h3>
+                            <p class="stat-value" id="active-value">$0</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Win Rate</h3>
+                            <p class="stat-value" id="win-rate">0%</p>
+                        </div>
+                    </div>
+
+                    <div class="leads-section">
+                        <div class="section-header"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h2>My Opportunities</h2>
+                            <div class="filter-container">
+                                <input type="text" id="client-filter" placeholder="Filter by Client..."
+                                    style="padding: 0.5rem; border: 1px solid #ddd; border-radius: 6px;">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table id="leads-table">
+                                <thead>
+                                    <tr>
+                                        <th>Client</th>
+                                        <th>Project Name</th>
+                                        <th>Value</th>
+                                        <th>Status</th>
+                                        <th>Likelihood</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leads-list">
+                                    <!-- Leads will be injected here -->
+                                </tbody>
+                                <tfoot>
+                                    <tr style="font-weight: bold; background-color: #f9fafb;">
+                                        <td colspan="2" style="text-align: right;">Total Value:</td>
+                                        <td id="total-value-footer">$0</td>
+                                        <td colspan="3"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -119,6 +160,57 @@
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
+
+    <!-- New Lead Modal -->
+    <div id="lead-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>New Growth Opportunity</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="lead-form">
+                <div class="form-group">
+                    <label for="client-name">Client Name</label>
+                    <input type="text" id="client-name" required placeholder="e.g. Acme Corp">
+                </div>
+                <div class="form-group">
+                    <label for="opportunity-title">Opportunity Title</label>
+                    <input type="text" id="opportunity-title" required placeholder="e.g. Q4 Digital Campaign">
+                </div>
+                <div class="form-group">
+                    <label for="lead-date">Target Close Date</label>
+                    <input type="date" id="lead-date" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="lead-value">Estimated Value ($)</label>
+                        <input type="number" id="lead-value" required min="0" placeholder="10000">
+                    </div>
+                    <div class="form-group">
+                        <label for="lead-likelihood">Likelihood (%)</label>
+                        <input type="range" id="lead-likelihood" min="0" max="100" value="50"
+                            oninput="this.nextElementSibling.value = this.value + '%'">
+                        <output>50%</output>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="lead-status">Initial Status</label>
+                    <select id="lead-status">
+                        <option value="identified">Identified</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="proposal">Proposal Sent</option>
+                        <option value="negotiation">Negotiation</option>
+                        <option value="won">Won</option>
+                        <option value="lost">Lost</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary close-modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Opportunity</button>
+                </div>
+            </form>
         </div>
     </div>
 

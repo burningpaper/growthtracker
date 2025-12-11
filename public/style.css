@@ -203,6 +203,85 @@ body {
     border: 2px dashed var(--surface-light);
 }
 
+/* Table Styles */
+.table-responsive {
+    overflow-x: auto;
+    background: var(--surface-dark);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--surface-light);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+th,
+td {
+    padding: 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--surface-light);
+    color: var(--text-main);
+}
+
+th {
+    background-color: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+/* Inline Edit Inputs */
+.edit-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    margin-right: 0.25rem;
+}
+
+.btn-edit {
+    background-color: #e2e8f0;
+    color: #475569;
+}
+
+.btn-save {
+    background-color: #10b981;
+    color: white;
+}
+
+.btn-cancel {
+    background-color: #ef4444;
+    color: white;
+}
+
+/* Status Badges (Keep existing but ensure they fit in table) */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
 /* Modal */
 .modal {
     position: fixed;
