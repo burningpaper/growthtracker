@@ -408,8 +408,7 @@ function updateStats(currentLeads) {
     const activeValue = activeLeads.reduce((sum, l) => sum + parseFloat(l.value || 0), 0);
     const wonLeads = currentLeads.filter(l => l.status === 'Won').length;
     const lostLeads = currentLeads.filter(l => l.status === 'Lost').length;
-    const closedLeads = wonLeads + lostLeads;
-    const winRate = closedLeads > 0 ? Math.round((wonLeads / closedLeads) * 100) : 0;
+    const winRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0;
 
     totalLeadsEl.textContent = totalLeads;
     activeValueEl.textContent = `R${activeValue.toLocaleString()}`;
