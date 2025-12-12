@@ -121,7 +121,15 @@ app.post('/api/auth/sso', async (req, res) => {
         const publicKey = require('crypto').createPublicKey(formattedKey);
 
         // Verify the token using the Public Key Object
-        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'], clockTolerance: 60 });
+        const decodedToken = jwt.decode(token);
+        console.log('[SSO Debug] Token Claims:', {
+            nbf: decodedToken?.nbf,
+            iat: decodedToken?.iat,
+            exp: decodedToken?.exp,
+            serverTime: Math.floor(Date.now() / 1000)
+        });
+
+        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'], clockTolerance: 300 });
         const { email, name } = decoded;
 
         if (!email) {
