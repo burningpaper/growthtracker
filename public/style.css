@@ -243,6 +243,13 @@ tr:last-child td {
     border-bottom: none;
 }
 
+tfoot td {
+    font-weight: bold;
+    color: var(--text-main);
+    background-color: var(--surface-dark);
+    border-top: 2px solid var(--surface-light);
+}
+
 /* Inline Edit Inputs */
 /* Filter Bar */
 .filter-bar {
