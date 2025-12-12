@@ -29,9 +29,20 @@ The system will need rules and behaviour so that leads are managed through a pip
 
 ### 4. User Management (SSO)
 
+# Localization
+- **Currency**: South African Rand (R). All monetary values displayed with "R" prefix.
+
+# Logic Definitions
+- **Win Rate**: Calculated as `(Total Won Leads / Total Leads) * 100`.
+  - Example: 1 Won / 2 Total = 50%.
+
 # Authentication & Users
 - **Primary Auth**: Okta SSO via Intranet link.
 - **Mechanism**: Users arrive with an encrypted JWT token containing details (email, name).
+- **SSO Robustness**:
+  - **Clock Tolerance**: 5 minutes (300s) to handle server time differences.
+  - **Date Format**: Supports ISO string dates for `nbf` and `exp`.
+  - **Claims**: Maps `sub` to `email` if `email` claim is missing.
 - **Fallback**: Email/Password login (legacy/admin).
 - **User Provisioning**: Auto-create user if they don't exist upon valid SSO login.
 - Leads are associated with the user who created them.

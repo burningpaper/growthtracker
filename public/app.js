@@ -404,14 +404,19 @@ function updateStats(currentLeads) {
     if (!totalLeadsEl || !activeValueEl || !winRateEl) return;
 
     const totalLeads = currentLeads.length;
-    const activeLeads = currentLeads.filter(l => l.status !== 'Won' && l.status !== 'Lost');
+    const activeLeads = currentLeads.filter(l => !['Won', 'Lost'].includes(l.status));
     const activeValue = activeLeads.reduce((sum, l) => sum + parseFloat(l.value || 0), 0);
+    const revenueWon = currentLeads
+        .filter(l => l.status === 'Won')
+        .reduce((sum, l) => sum + parseFloat(l.value || 0), 0);
+
     const wonLeads = currentLeads.filter(l => l.status === 'Won').length;
     const lostLeads = currentLeads.filter(l => l.status === 'Lost').length;
     const winRate = totalLeads > 0 ? Math.round((wonLeads / totalLeads) * 100) : 0;
 
     totalLeadsEl.textContent = totalLeads;
     activeValueEl.textContent = `R${activeValue.toLocaleString()}`;
+    document.getElementById('revenue-won').textContent = `R${revenueWon.toLocaleString()}`;
     winRateEl.textContent = `${winRate}%`;
 }
 
