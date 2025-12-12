@@ -121,7 +121,7 @@ app.post('/api/auth/sso', async (req, res) => {
         const publicKey = require('crypto').createPublicKey(formattedKey);
 
         // Verify the token using the Public Key Object
-        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
+        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'], clockTolerance: 60 });
         const { email, name } = decoded;
 
         if (!email) {
