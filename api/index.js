@@ -121,19 +121,40 @@ app.post('/api/auth/sso', async (req, res) => {
         const publicKey = require('crypto').createPublicKey(formattedKey);
 
         // Verify the token using the Public Key Object
-        const decodedToken = jwt.decode(token);
-        console.log('[SSO Debug] Token Claims:', {
-            nbf: decodedToken?.nbf,
-            iat: decodedToken?.iat,
-            exp: decodedToken?.exp,
-            serverTime: Math.floor(Date.now() / 1000)
+        // Intranet sends ISO strings for nbf/exp and uses sub for email, so we must:
+        // 1. Ignore standard nbf/exp validation (which expects numbers)
+        // 2. Manually validate nbf/exp
+        // 3. Map sub to email
+        const decoded = jwt.verify(token, publicKey, {
+            algorithms: ['RS256'],
+            ignoreNotBefore: true,
+            ignoreExpiration: true
         });
 
-        const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'], clockTolerance: 300 });
-        const { email, name } = decoded;
+        // Manual Validation for ISO string timestamps
+        const now = Date.now();
+        const tolerance = 300 * 1000; // 5 minutes in ms
+
+        if (decoded.nbf) {
+            const nbfTime = Date.parse(decoded.nbf);
+            if (!isNaN(nbfTime) && now < nbfTime - tolerance) {
+                throw new Error('Token not yet active');
+            }
+        }
+
+        if (decoded.exp) {
+            const expTime = Date.parse(decoded.exp);
+            if (!isNaN(expTime) && now > expTime) {
+                throw new Error('Token expired');
+            }
+        }
+
+        // Map claims
+        const email = decoded.email || decoded.sub;
+        const name = decoded.name || (email ? email.split('@')[0] : 'User');
 
         if (!email) {
-            return res.status(400).json({ error: 'Invalid token: missing email' });
+            return res.status(400).json({ error: 'Invalid token: missing email/sub' });
         }
 
         // Check if user exists
